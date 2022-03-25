@@ -1,0 +1,70 @@
+#!/system/bin/sh
+
+print() {
+    printf $@
+}
+
+executeable() {
+    chmod +x /system/bin/$@  
+}
+
+systemWrite() {
+    if [ $1 = true ]; then
+        mount -o rw,remount /
+        print "System is now read/write"  
+    elif [ $1 = false ]; then
+        mount -o ro,remount /
+        print "System is now read-only"
+    else
+        print "System not writeable"
+    fi
+}
+
+runAfterBoot() {
+    dbg "Sleeping until boot completes."
+    while [[ `getprop sys.boot_completed` -ne 1 ]]
+    do
+        sleep 1
+    done
+}
+
+fmmmSupport() {
+    if [ -n "$MMM_EXT_SUPPORT" ]; then
+        ui_print "#!useExt"
+        mmm_exec() {
+            ui_print "$(echo "#!$@")"
+        }
+    else
+        mmm_exec() { true; }
+        abort "! This module need to be executed in Fox's Magisk Module Manager"
+        exit 1
+    fi
+}
+
+setArgs(){
+  while [ "${1:-}" != "" ]; do
+    case "$1" in
+      "--notification")
+        exec su -lp 2000 -c "cmd notification post -S bigtext -t '$2' 'Tag' '$3'"
+        ;;
+      "--systemWrite")
+        systemWrite $2
+        ;;
+      "--executeable")
+        executeable $2
+        ;;
+      "--fmmmSupport")
+        fmmmSupport
+        ;;
+      "--runAfterBoot")
+        runAfterBoot
+        ;;
+    esac
+    shift
+  done
+}
+
+
+# Main
+
+setArgs $*
